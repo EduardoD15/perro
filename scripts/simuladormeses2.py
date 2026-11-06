@@ -1,9 +1,10 @@
 import time
 import random
 from datetime import datetime, timedelta
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
+from db_connection import create_database_engine
 
-engine = create_engine('postgresql://postgres:123456789@localhost:5432/bi_envasado')
+engine = create_database_engine()
 
 print("="*65)
 print("🚀 CARGA PROGRESIVA DE HISTORIAL (SEPTIEMBRE A NOVIEMBRE 2026)")
