@@ -3,6 +3,7 @@ import random
 from datetime import datetime, timedelta
 from sqlalchemy import text
 from db_connection import create_database_engine
+from simulation_dimensions import ensure_simulation_dimensions
 
 engine = create_database_engine()
 
@@ -16,6 +17,9 @@ fecha_actual = fecha_inicio
 registros_creados = 0
 
 try:
+    with engine.begin() as conn:
+        dimensions = ensure_simulation_dimensions(conn)
+
     while fecha_actual <= fecha_fin:
         id_fecha = fecha_actual.date()
         
@@ -34,9 +38,9 @@ try:
         # 2. Insertar registros para 2 turnos diarios por cada línea
         for hora in [6, 14]:  # Turnos 6:00 AM y 2:00 PM
             ts = datetime.combine(id_fecha, datetime.min.time()) + timedelta(hours=hora)
-            for maq in [1, 2, 3, 4]:
-                codigo_paro = random.choice([1, 2, 5, 14, 19, 19, 19])
-                if codigo_paro == 19:
+            for maquina_id in dimensions.machines.values():
+                codigo_paro = random.choice(["[01]", "[02]", "[05]", "[14]", "[19]", "[19]", "[19]"])
+                if codigo_paro == "[19]":
                     h_trab, h_paro, pacas, obs = 7.5, 0.5, random.randint(350, 420), "Turno normal de producción"
                 else:
                     h_trab = round(random.uniform(3.0, 6.0), 2)
@@ -51,11 +55,14 @@ try:
                             id_codigo_paro, horas_trabajadas, pacas_producidas, 
                             horas_sin_trabajar, observacion
                         ) VALUES (
-                            :fecha, :ts, :maq, 1, 1, :paro, :h_trab, :pacas, :h_paro, :obs
+                            :fecha, :ts, :maq, :operador, :producto, :paro, :h_trab, :pacas, :h_paro, :obs
                         );
                     """), {
-                        "fecha": id_fecha, "ts": ts, "maq": maq,
-                        "paro": codigo_paro, "h_trab": h_trab, "pacas": pacas,
+                        "fecha": id_fecha, "ts": ts, "maq": maquina_id,
+                        "operador": dimensions.operator_id,
+                        "producto": dimensions.product_id,
+                        "paro": dimensions.stop_codes[codigo_paro],
+                        "h_trab": h_trab, "pacas": pacas,
                         "h_paro": h_paro, "obs": obs
                     })
                 registros_creados += 1
